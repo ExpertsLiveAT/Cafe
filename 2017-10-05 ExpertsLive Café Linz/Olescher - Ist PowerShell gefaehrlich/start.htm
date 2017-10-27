@@ -1,0 +1,232 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <title>Ist PowerShell gefährlich? Best Practices und Tipps aus der Praxis. - Experts Live Cafe 2017-10-05 - Olescher Christian</title>
+    <meta charset="utf-8">
+    <style>
+      body { font-family: 'Calibri Light' }
+      h1, h2, h3 {
+        font-family: 'Calibri';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Lucida Console'; }
+    </style>
+  </head>
+  <body>
+    <textarea id="source" style="visibility: hidden">
+name: Ist PowerShell gefährlich?
+layout: true
+class: left, top
+---
+.right[<img src="./files/expertslive-austria.png" height="70" />]
+
+.right[<img src="./files/bbrzgruppe.png" height="40" />]
+
+## Ist PowerShell gefährlich?
+
+#### Best Practices und Tipps aus der Praxis.
+Überblick, welche Sicherheitsfeatures PowerShell von Haus aus anbietet und nutzt, und auf welche Einstellungen und Vorgangsweisen in einer Unternehmensumgebung geachtet werden sollte. Im Besonderen sind das die Bereiche Signatur, Remoting, Logging, AMSI, AppLocker, DeviceGuard.
+<br />
+<br />
+<br />
+<br />
+
+#### christian.olescher@bbrz-gruppe.at
+
+---
+## PowerShell ist ein Werkzeug
+
+![](./files/werkzeug.jpg)
+
+---
+## PowerShell 2.0?
+--
+
+### Downgrade Attack
+`powershell.exe -Version 2.0 -Command { Start-SomethingEvil } `
+
+--
+### Upgrade auf PowerShell 5.1
+- Windows 10, Server 2016: Fixer Bestandteil
+- Mit Windows Update aktualisiert
+- Alle anderen:
+ https://docs.microsoft.com/en-us/powershell/wmf/5.1/install-configure
+
+---
+## PowerShell 2.0?
+
+### PowerShell 2.0 entfernen
+```powershell
+# Server
+Remove-WindowsFeature PowerShell-V2
+
+# Client
+Disable-WindowsOptionalFeature –Online -FeatureName MicrosoftWindowsPowerShellV2Root –Remove
+```
+
+Alternativ: `dism.exe`
+
+---
+## ExecutionPolicy<br/>is not a security boundary
+
+.center[![](./files/gitter.jpg)]
+
+---
+## ExecutionPolicy<br />is not a security boundary
+
+`powershell.exe -ExecutionPolicy Unrestricted`
+
+```powershell
+Set-ExecutionPolicy Unrestricted -Scope CurrentUser
+Set-ExecutionPolicy Unrestricted -Scope Process
+```
+
+---
+## Sicherheitsfeatures in PowerShell
+
+### Bietet an
+- Signatur
+- Remoting-Einstellungen
+- Constrained Language Mode
+- Logging
+
+### Benutzt
+- Antimalware Scan Interface
+- AppLocker
+- DeviceGuard
+
+---
+## Signatur
+
+### Kann für Whitelisting benutzt werden in
+- AppLocker
+- DeviceGuard
+- ExecutionPolicy ;)
+
+### Benötigt ein Code-Signing-Zertifikat
+
+```powershell
+$cert = Get-ChildItem cert:\CurrentUser\My\<FINGERPRINT>
+
+Set-AuthenticodeSignature c:\foo.ps1 $cert
+```
+
+https://www.hanselman.com/blog/SigningPowerShellScripts.aspx
+
+---
+## Remoting / JEA
+
+### Listener
+~~HTTP Port 5985~~ nicht für Produktivumgebung gedacht
+
+HTTPS Port 5986
+
+```powershell
+Get-ChildItem WSMan:\localhost\Listener
+```
+
+---
+## Remoting / JEA
+
+### Standardberechtigungen
+- NT AUTHORITY\INTERACTIVE
+- BUILTIN\Administrators
+- BUILTIN\Remote Management Users
+
+### Authentifizierung mit Kerberos, Fallback mit NTLM
+
+### SessionConfigurations
+```powershell
+Get-PSSessionConfiguration
+```
+
+---
+## Remoting / JEA
+
+### Second Hop Problem in Remoting
+
+- ~~CredSSP~~
+- Kerberos delegation (unconstrained)
+- Kerberos constrained delegation
+- Resource-based Kerberos constrained delegation (ab Server 2012)
+
+https://docs.microsoft.com/en-us/powershell/scripting/setup/ps-remoting-second-hop?view=powershell-5.1
+
+---
+## Logging
+Group Policy: *Computer Configuration / Administrative Templates / Windows Components / Windows PowerShell*
+
+Alle produzieren Einträge im EventLog *Microsoft-Windows-PowerShell/Operational*
+
+### Script Block Logging 
+"Turn on PowerShell Script Block Logging": Enabled
+
+### Module Logging
+"Turn on PowerShell Module Logging": Enabled
+
+### System wide Transcripts
+"Turn on PowerShell Transcription": Enabled
+(Zielpfad möglichst nicht-lokal, write-only)
+
+---
+## Antimalware Scan Interface AMSI
+
+- verfügbar ab Windows 10, Server 2016
+
+- Scripting Engine schickt Code zur Prüfung an Antimalware
+- Antimalware entscheidet mit Signaturen und Heuristiken, ob Code schädlich
+- Script Engine führt Code nur aus, wenn von Antimalware als unschädlich befunden
+
+- z. B. Windows Defender
+
+---
+## AppLocker und DeviceGuard
+
+### Full Language Mode vs Constrained Language Mode
+"The ConstrainedLanguage language mode permits all Windows cmdlets and all Windows PowerShell language elements, but it limits permitted types."
+
+```powershell
+$ExecutionContext.SessionState.LanguageMode
+```
+### Aktivieren per Group Policy (GPO)
+- AppLocker Script Rules im Allow Mode
+- Device Guard mit User Mode Code Integrity (ab Windows 10 / Server 2016)
+- Benutzt Signaturen oder File Hashes
+
+AppLocker kann von lokalen Admins leicht umgangen werden (Service stoppen), Device Guard nicht.
+
+---
+## Tipps
+
+#### Credentials in CliXML statt im Credential Manager
+
+#### AppLocker-Sperre von PowerShell.exe -> System.Management.Automation.dll
+
+#### Local Administrator Password Security LAPS
+aka.ms/laps
+
+#### Priviliged Access Workstion PAW
+aka.ms/cyberpaw
+
+---
+## Dank & Links
+
+#### David das Neves
+- https://blogs.msdn.microsoft.com/daviddasneves/2017/05/25/powershell-security-at-enterprise-customers/
+
+#### PowerShell Team Blog
+- https://blogs.msdn.microsoft.com/powershell/2017/08/24/windows-powershell-2-0-deprecation/
+- https://blogs.msdn.microsoft.com/powershell/2017/04/10/a-comparison-of-shell-and-scripting-language-security/
+
+#### psconf 2017
+- https://psconf.eu
+
+    </textarea>
+    <!--<script src="https://remarkjs.com/downloads/remark-latest.min.js /"></script>-->
+    <script src="./files/remark-latest.min.js"></script>
+    <script>
+//initialize slideshow
+        var slideshow = remark.create({ slideNumberFormat: '[%current%]', highlightStyle: 'vs' });
+   </script>
+  </body>
+</html>
