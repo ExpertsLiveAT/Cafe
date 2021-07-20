@@ -1,0 +1,1 @@
+# The Content for session Azure ARM can be found [here (ARM)](https://github.com/Lagler-Gruener/YouTubeChannel/tree/main/36_Azure_ARM-Development), [here (Bicep)](https://github.com/Lagler-Gruener/YouTubeChannel/tree/main/37_Azure_Biceps-Development)
