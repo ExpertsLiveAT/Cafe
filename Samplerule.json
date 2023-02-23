@@ -1,0 +1,11 @@
+{
+    "Name"                  : "ELAT Cafe rule",
+    "Comments"              : "Adds a special x-header to all emails",
+    "Enabled"               : false,
+    "SetHeaderName"         : "X-ELAT-PowerShell",
+    "SetHeaderValue"        : "rocksEvenMore",
+    "Priority"              : 0,
+    "SetAuditSeverity"      : "Low",
+    "Mode"                  : "Enforce",
+    "SenderAddressLocation" : "Header"
+}
